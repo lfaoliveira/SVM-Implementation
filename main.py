@@ -25,14 +25,8 @@ def preprocessamento(df, seed_programa):
   
   #TODO: remover virgulas dos campos de float e transformar em pontos
   for nome, values in df.items():
-    if( nome in ["Distância de Casa", "Distância da Última Transação", "Razão entre o valor da compra e o valor médio"] ):
-      print(f"PROCESSANDO COLUNA {nome}")
-      copia = np.array(values).tolist()
-      for i in range(len(copia)):
-        string = str(copia[i])
-        copia[i] = string.replace(",", ".")
-      df[nome] = copia
-  
+        if nome in ["Distância de Casa", "Distância da Última Transação", "Razão entre o valor da compra e o valor médio"]:
+            df[nome] = df[nome].str.replace(',', '.').astype(float)
   
 
   x = df.drop(['Fraude', 'Identificador da transação'], axis=1).values
@@ -44,9 +38,9 @@ def preprocessamento(df, seed_programa):
   scaler = StandardScaler()
 
   # importante devido às escalas diferentes das features
-  X_train = scaler.fit_transform(X_train)
-  X_test = scaler.transform(X_test)
-  return X_train, X_test, y_train, y_test
+  X_train_scaled = scaler.fit_transform(X_train)
+  X_test_scaled = scaler.transform(X_test)
+  return X_train, X_test, X_train_scaled, X_test_scaled, y_train, y_test
 
 
 
@@ -71,6 +65,7 @@ def plot_predictions(X, model, nomes, resolution=0.02, padding=1.0):
    
 
     for i in range(n_features):
+
         x_min, x_max = feature_values.min() - padding, feature_values.max() + padding
         
         xx = np.arange(x_min, x_max, resolution)
@@ -95,10 +90,9 @@ def plot_predictions(X, model, nomes, resolution=0.02, padding=1.0):
 
 #---------------------------------------- MAIN ---------------------------------------------------#
 #depois usar biblioteca OS pra pegar o path do arquivo
-PATH_RUN = "C:\\Users\\Eu\\Desktop\\SVM\\"
+diretorio = os.path.dirname(os.path.abspath(__file__))
+filename = os.path.join(diretorio, "Cartao de credito.csv")
 
-filename = "Cartao de credito.csv"
-filename = os.path.join(PATH_RUN, filename )
 columns_to_read = ["Identificador da transação", "Distância de Casa", "Distância da Última Transação",
                    "Razão entre o valor da compra e o valor médio", "Local Repetido", "Usou Chip", "Usou Senha",
                    "Online", "Fraude"]
@@ -107,15 +101,15 @@ nomes.remove("Identificador da transação")
 
 df = ler_dados(filename, columns_to_read)
 seed_programa = 42
-X_train, X_test, y_train, y_test  = preprocessamento(df, seed_programa)
+X_train, X_test, X_train_scaled, X_test_scaled, y_train, y_test  = preprocessamento(df, seed_programa)
 print("\nPRE-PROCESSAMENTO OK!")
 model = LinearSVC(verbose = 3, random_state=seed_programa, class_weight={"SIM": 5, "NÃO": 1}) 
 
 # Train the model
 print("\nIniciando treinamento\n")
-model.fit(X_train, y_train)
+model.fit(X_train_scaled, y_train)
 
-y_pred = model.predict(X_test)
+y_pred = model.predict(X_test_scaled)
 #TODO: plotar labels e predicao sobre cada feature, pra saber se o modelo relamente esta prevendo bem
 #OBS: plotagem tem que ser baseada nao dataset sem normalização, pra testar de verdade.
 plot_predictions(X_test, model, nomes)
@@ -132,4 +126,3 @@ print(classification_report(y_test, y_pred))
 
 print("\nAccuracy Score:")
 print(accuracy_score(y_test, y_pred))
-
